@@ -574,13 +574,22 @@ const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
 async function loadLib(){
   if(L.state==='loading'||L.state==='ready') return;
   L.state='loading';
-  try{ const r=await fetch('exercises.json'); if(!r.ok) throw new Error(r.status); L.data=await r.json(); L.state='ready'; invalidateNames() }
+  try{ const r=await fetch('exercises.json'); if(!r.ok) throw new Error(r.status); const d=await r.json(); if(LOC.code) await locLoad(); locApply(d); L.data=d; L.state='ready'; invalidateNames() }
   catch(e){ L.state='error' }
   if(!typingNow()) render(); else if(S.tab==='library'){ const o=$('#lib-out'); if(o) o.innerHTML=libOut() }
 }
 const SYN={db:'dumbbell',dbs:'dumbbell',bb:'barbell',flies:'fly',flyes:'fly',flye:'fly',rev:'reverse',kb:'kettlebell',bw:'body'};
 function sn(str){ return String(str||'').toLowerCase().replace(/e-z/g,'ez').replace(/[^a-z0-9가-힣]+/g,' ').trim().split(/\s+/).filter(Boolean).map(w=>{ w=SYN[w]||w; if(w.length>4&&/(ch|sh|x)es$/.test(w)) return w.slice(0,-2); if(w.length>3&&/s$/.test(w)&&!/ss$/.test(w)) return w.slice(0,-1); return w }) }
 const snj=str=>sn(str).join(' ');
+/* ---------- translated exercise names (exercises-<lang>.json) ---------- */
+const LOC={code:(()=>{ const m=document.cookie.match(/(?:^|;\s*)googtrans=\/[^\/]*\/([^;]+)/); const c=m?decodeURIComponent(m[1]):''; return ['ko'].includes(c)?c:'' })(),map:null,key:null,p:null};
+function locLoad(){ if(!LOC.code) return Promise.resolve(); if(LOC.p) return LOC.p;
+  LOC.p=fetch('exercises-'+LOC.code+'.json').then(r=>r.ok?r.json():null).then(m=>{ if(m){ LOC.map=m; LOC.key=new Map(); Object.keys(m).forEach(k=>LOC.key.set(snj(k),m[k])); if(L.data) locApply(L.data); invalidateNames(); if(!typingNow()) render() } }).catch(()=>{});
+  return LOC.p }
+function locApply(d){ if(!LOC.map||!d) return; d.forEach(x=>{ const t=LOC.map[x.n]; if(!t) return; (x.a||[]).forEach(a=>{ const k=snj(a); if(!LOC.key.has(k)) LOC.key.set(k,t) }); x.a=(x.a||[]).filter(a=>a!==t).concat([t]) }) }
+function locOf(name){ if(!LOC.key||!name) return ''; return LOC.key.get(snj(name))||'' }
+function xn(name){ const t=locOf(name); return t?'<span class="notranslate" translate="no" title="'+esc(name)+'">'+esc(t)+'</span>':esc(name) }
+function xt(name){ return locOf(name)||name }
 function kindOf(x){ if(x.kd) return x.kd; return x.c==='cardio'?'cardio':x.c==='stretching'?'time':'strength' }
 /* ---------- one exercise, many names ----------
    Every name resolves to a group id: 'L:<library name>' or 'U:<your name>'.
@@ -908,7 +917,7 @@ function viewLog(){
   h+='<button class="btn block primary" data-act="add-ex">+ Add exercise</button>';
   if(!a.exercises.length){
     const recent=knownExercises().filter(k=>k.count).slice(0,8);
-    if(recent.length) h+='<div class="quick">'+recent.map(k=>'<button class="chip" data-act="pick" data-name="'+esc(k.name)+'" data-kind="'+k.kind+'">'+esc(k.name)+'</button>').join('')+'</div>';
+    if(recent.length) h+='<div class="quick">'+recent.map(k=>'<button class="chip" data-act="pick" data-name="'+esc(k.name)+'" data-kind="'+k.kind+'">'+xn(k.name)+'</button>').join('')+'</div>';
   }
   const armF=S.confirm==='finish-empty', armD=S.confirm==='discard';
   h+='<div class="row-btns"><button class="btn '+(armF?'confirm':'ghost')+'" data-act="finish">'+(armF?'Nothing logged. Tap to discard':'Finish workout')+'</button>'
@@ -923,7 +932,7 @@ function exCard(a,ex){
   const SB=ssBlocks(a), sb=SB[ex.id], idx=a.exercises.indexOf(ex), nxt=a.exercises[idx+1];
   let h='<section class="ex'+(sb?' ss'+(sb.pos>0?' ss-cont':'')+(sb.pos<sb.size-1?' ss-more':''):'')+'" id="ex-'+ex.id+'">';
   if(sb&&sb.pos===0) h+='<div class="ss-band">Superset '+sb.letter+' · '+sb.size+' exercises, back to back</div>';
-  h+='<div class="ex-h"><span class="plate '+ex.kind+'" title="'+esc(KINDS[ex.kind])+'"></span><div class="ex-title"><h3>'+esc(ex.name)+'</h3><div class="ex-tools">';
+  h+='<div class="ex-h"><span class="plate '+ex.kind+'" title="'+esc(KINDS[ex.kind])+'"></span><div class="ex-title"><h3>'+xn(ex.name)+'</h3><div class="ex-tools">';
   if(ex.kind==='strength'){
     h+='<label class="range">Reps<input id="rg-'+ex.id+'" data-range="'+ex.id+'" value="'+esc(ex.range||'')+'" placeholder="8-12" inputmode="text" autocomplete="off" aria-label="Target rep range"></label>';
     h+='<button class="chip" data-act="bw" data-ex="'+ex.id+'" aria-pressed="'+(!!ex.bw)+'">BW</button>';
@@ -938,7 +947,7 @@ function exCard(a,ex){
   if(S.ssEx===ex.id){
     const others=a.exercises.filter(x=>x!==ex&&!(sb&&sb.ids.includes(x.id)));
     h+='<div class="kind-pick"><span class="eyebrow">'+(sb?'Add to superset '+sb.letter:'Superset '+esc(ex.name)+' with')+'</span><div class="ss-opts">'
-      +others.map(x=>{ const ob=SB[x.id]; return '<button class="btn small ghost" data-act="ss-pick" data-ex="'+ex.id+'" data-to="'+x.id+'"><span>'+esc(x.name)+'</span><small>'+(ob?'now in '+ob.label+', moves out':'#'+(a.exercises.indexOf(x)+1))+'</small></button>' }).join('')
+      +others.map(x=>{ const ob=SB[x.id]; return '<button class="btn small ghost" data-act="ss-pick" data-ex="'+ex.id+'" data-to="'+x.id+'"><span>'+xn(x.name)+'</span><small>'+(ob?'now in '+ob.label+', moves out':'#'+(a.exercises.indexOf(x)+1))+'</small></button>' }).join('')
       +'</div><span class="muted" style="font-size:12px">The one you pick moves to sit right after '+(sb?'this superset':esc(ex.name))+'. Only that exercise changes.</span></div>';
   }
 
@@ -1034,7 +1043,7 @@ function reorderView(a){
     const pr=exProgress(ex), started=pr.d>0;
     const rb=ssBlocks(a)[ex.id];
     h+='<li class="ro-item'+(started?' started':'')+(rb?' ss':'')+'"><span class="ro-n">'+(rb?rb.label:(i+1))+'</span><span class="plate '+ex.kind+'"></span>'
-      +'<span class="ro-name"><b>'+esc(ex.name)+'</b><small>'+(pr.d?pr.d+' of '+pr.n+' sets done':pr.n+' sets')+'</small></span>'
+      +'<span class="ro-name"><b>'+xn(ex.name)+'</b><small>'+(pr.d?pr.d+' of '+pr.n+' sets done':pr.n+' sets')+'</small></span>'
       +'<span class="ro-btns">'
       +(!started&&i!==lastDone+1?'<button class="btn small ro-next" data-act="ro-next" data-ex="'+ex.id+'">Do next</button>':'')
       +'<button class="icon-btn" data-act="ro-move" data-d="-1" data-ex="'+ex.id+'" aria-label="Move '+esc(ex.name)+' up"'+(i===0?' disabled':'')+'>↑</button>'
@@ -1160,7 +1169,7 @@ function viewHistory(){
       h+='<button class="h-trash'+(armedRow?' armed':'')+'" data-act="hist-del" data-id="'+s.id+'" aria-label="'+(armedRow?'Tap again to delete this workout':'Delete this workout')+'">'+(armedRow?'Delete?':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>')+'</button></div>'; }
     if(open){
       const HB=ssBlocks(s);
-      h+='<div class="h-body">'+s.exercises.map(ex=>'<div class="h-ex"><span class="plate '+ex.kind+'"></span><div><h4>'+(HB[ex.id]?'<span class="sstag">'+HB[ex.id].label+'</span> ':'')+esc(ex.name)+(ex.kind==='strength'&&!ex.bw?' <small>· '+exU(ex)+'</small>':'')+(ex.range?' <small>· '+esc(ex.range)+' reps</small>':'')+'</h4><div class="sets-txt">'+(grouped(ex)||'<span class="muted">No sets</span>')+'</div>'+(ex.note?'<div class="nt">'+esc(ex.note)+'</div>':'')+'</div></div>').join('');
+      h+='<div class="h-body">'+s.exercises.map(ex=>'<div class="h-ex"><span class="plate '+ex.kind+'"></span><div><h4>'+(HB[ex.id]?'<span class="sstag">'+HB[ex.id].label+'</span> ':'')+xn(ex.name)+(ex.kind==='strength'&&!ex.bw?' <small>· '+exU(ex)+'</small>':'')+(ex.range?' <small>· '+esc(ex.range)+' reps</small>':'')+'</h4><div class="sets-txt">'+(grouped(ex)||'<span class="muted">No sets</span>')+'</div>'+(ex.note?'<div class="nt">'+esc(ex.note)+'</div>':'')+'</div></div>').join('');
       const armed=S.confirm==='del:'+s.id;
       h+='<label class="h-dt"><span>Date</span><input type="date" class="sel" data-hdate="'+s.id+'" value="'+ymdOf(s.startedAt)+'" aria-label="Workout date"></label>';
       h+='<div class="row-btns"><button class="btn small" data-act="repeat" data-id="'+s.id+'">Repeat this workout</button><button class="btn small '+(armed?'confirm':'ghost danger')+'" data-act="hist-del" data-id="'+s.id+'">'+(armed?'Tap again to delete':'Delete')+'</button></div></div>';
@@ -1192,7 +1201,7 @@ function viewProgress(){
   let m=ms.find(x=>x[0]===S.metric)||ms[0]; S.metric=m[0];
   const lower=m[0]==='pace'||m[0]==='pace100'||m[0]==='best';
   const pts=hist.map(h=>({x:h.session.startedAt,y:stats(h.ex)[m[0]]})).filter(p=>p.y!=null&&p.y>0);
-  let h='<select class="sel" id="prog-ex" aria-label="Exercise">'+names.map(n=>'<option'+(n.name===cur.name?' selected':'')+'>'+esc(n.name)+'</option>').join('')+'</select>';
+  let h='<select class="sel" id="prog-ex" aria-label="Exercise">'+names.map(n=>'<option'+(n.name===cur.name?' selected':'')+'>'+esc(xt(n.name))+'</option>').join('')+'</select>';
   h+=unitSwitch();
   h+='<div class="seg" role="group" aria-label="Measure">'+ms.map(x=>'<button data-act="metric" data-m="'+x[0]+'" aria-pressed="'+(x[0]===m[0])+'">'+x[1]+'</button>').join('')+'</div>';
   if(!pts.length){ h+='<section class="card"><p class="muted" style="margin:0">No '+esc(m[1].toLowerCase())+' logged for this exercise yet.</p></section>'; return h }
@@ -1272,7 +1281,7 @@ function libRow(x,sel,fav,hid){
   const sub=x.own?'Your exercise':[x.p.slice(0,2).map(cap).join(', '),eqLabel(x.e),cap(x.m)].filter(Boolean).join(' · ');
   let h='<div class="li'+(on?' sel':'')+(hidden?' hid':'')+'"><div class="li-row">'
     +'<button class="li-check" data-act="lib-sel" data-k="'+esc(x.k)+'" aria-pressed="'+on+'" aria-label="Select '+esc(x.n)+'">'+SVG_CHECK+'</button>'
-    +'<button class="li-main" data-act="lib-open" data-k="'+esc(x.k)+'" aria-expanded="'+open+'"><span class="li-name">'+esc(x.n)+'</span><span class="li-sub">'+esc(sub)+(x.used?' · logged '+x.used+'×':'')+'</span></button>'
+    +'<button class="li-main" data-act="lib-open" data-k="'+esc(x.k)+'" aria-expanded="'+open+'"><span class="li-name">'+xn(x.n)+'</span><span class="li-sub">'+esc(sub)+(x.used?' · logged '+x.used+'×':'')+'</span></button>'
     +'<button class="icon-btn star" data-act="lib-fav" data-k="'+esc(x.k)+'" aria-pressed="'+fav.has(x.k)+'" aria-label="Star '+esc(x.n)+'">'+SVG_STAR+'</button>'
     +'<button class="icon-btn" data-act="lib-hide" data-k="'+esc(x.k)+'" aria-label="'+(hidden?'Unhide ':'Hide ')+esc(x.n)+'" title="'+(hidden?'Unhide':'Not for me')+'">'+(hidden?SVG_SHOW:SVG_HIDE)+'</button></div>';
   if(open){
@@ -1453,7 +1462,7 @@ function impRender(){
     h='<div class="imp"><div class="summary"><div class="stats"><div class="stat"><b>'+ss.length+'</b><span>Workouts</span></div><div class="stat"><b>'+num(r.sets,0)+'</b><span>Sets</span></div><div class="stat"><b>'+r.exercises+'</b><span>Exercises</span></div></div></div>'
       +'<p style="margin:0">'+esc(fmtDate(first.startedAt,{day:'numeric',month:'short',year:'numeric'}))+' – '+esc(fmtDate(last.startedAt,{day:'numeric',month:'short',year:'numeric'}))+(r.skipped?' · <span class="muted">'+num(r.skipped,0)+' empty rows skipped</span>':'')+'</p>'
       +(r.update?'<p class="muted" style="margin:0;font-size:13px">'+r.update+' of these were imported before and will be updated, not duplicated.</p>':'')
-      +'<span class="eyebrow">Latest workouts found</span><div class="imp-list">'+ss.slice(-4).reverse().map(x=>'<div class="imp-s"><b>'+esc(fmtDate(x.startedAt,{weekday:'short',day:'numeric',month:'short'}))+' · '+esc(x.title||'Workout')+'</b><div class="sets-txt" style="font-weight:500;font-size:13px">'+x.exercises.slice(0,4).map(e=>'<span>'+esc(e.name)+' '+e.sets.length+'×</span>').join('')+(x.exercises.length>4?'<span>+'+(x.exercises.length-4)+' more</span>':'')+'</div></div>').join('')+'</div>'
+      +'<span class="eyebrow">Latest workouts found</span><div class="imp-list">'+ss.slice(-4).reverse().map(x=>'<div class="imp-s"><b>'+esc(fmtDate(x.startedAt,{weekday:'short',day:'numeric',month:'short'}))+' · '+esc(x.title||'Workout')+'</b><div class="sets-txt" style="font-weight:500;font-size:13px">'+x.exercises.slice(0,4).map(e=>'<span>'+xn(e.name)+' '+e.sets.length+'×</span>').join('')+(x.exercises.length>4?'<span>+'+(x.exercises.length-4)+' more</span>':'')+'</div></div>').join('')+'</div>'
       +'<div class="row-btns"><button class="btn ghost" data-act="imp-back2">Back</button><button class="btn primary" data-act="imp-go">Import '+ss.length+' workouts</button></div></div>';
   } else if(IMP.step==='saving'){
     const pc=IMP.total?Math.round(IMP.done/IMP.total*100):0;
@@ -1508,7 +1517,7 @@ function renderSheet(q){
       +Object.entries(KINDS).map(([key,lab])=>'<button class="btn small '+(key==='strength'?'primary':'')+'" data-act="create" data-kind="'+key+'">'+lab+'</button>').join('')+'</div></div>';
   }
   const used=matches.filter(x=>x.count), rest=matches.filter(x=>!x.count).sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)).slice(0,k?60:30);
-  const item=x=>'<button class="pick" data-act="pick" data-name="'+esc(x.name)+'" data-kind="'+x.kind+'"><span class="plate '+x.kind+'"></span><span class="pn">'+esc(x.name)+'</span><span class="ps">'+(inSession.has(x.g)?'In this workout':x.last?'Last '+esc(fmtDate(x.last)):esc(KINDS[x.kind]))+'</span></button>';
+  const item=x=>'<button class="pick" data-act="pick" data-name="'+esc(x.name)+'" data-kind="'+x.kind+'"><span class="plate '+x.kind+'"></span><span class="pn">'+xn(x.name)+'</span><span class="ps">'+(inSession.has(x.g)?'In this workout':x.last?'Last '+esc(fmtDate(x.last)):esc(KINDS[x.kind]))+'</span></button>';
   if(used.length) h+='<div class="list-h">Your exercises</div>'+used.map(item).join('');
   if(rest.length) h+='<div class="list-h">Suggestions</div>'+rest.map(item).join('');
   $('#ex-list').innerHTML=h;
@@ -2142,7 +2151,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{ flushAll(); fdFlushAll() });
 
-render();
+render(); locLoad();
 loadLib();
 if(active()&&!S.demo) wakeOn();
 connectCloud();
