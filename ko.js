@@ -7,7 +7,7 @@ dict: {
 "On this device":"이 기기에 저장","Saved to your account":"계정에 저장됨","Connecting…":"연결 중…","Language":"언어",
 "Search languages":"언어 검색","Korean is translated by hand. Other languages use Google automatic translation. Your workouts stay on this phone.":"한국어는 직접 번역했고, 다른 언어는 Google 자동 번역이에요. 운동 기록은 이 휴대폰에만 저장돼요.",
 // log tab
-"Ready to train":"오늘의 운동","Start empty workout":"빈 운동 시작","Weights in":"무게 단위","Weights are in":"무게 단위",
+"Ready to train":"오늘의 운동","Start empty workout":"새 운동 시작","Weights in":"무게 단위","Weights are in":"무게 단위",
 "Your first log":"첫 기록을 남겨 보세요",
 "Start a workout, add exercises, and tap ✓ after each set. The rest timer starts on its own. Next time, last session's numbers show up as hints.":"운동을 시작하고 종목을 추가한 뒤, 세트마다 ✓를 누르세요. 휴식 타이머는 자동으로 시작돼요. 다음번엔 지난 기록이 힌트로 표시됩니다.",
 "Import my spreadsheet":"내 스프레드시트 가져오기","See it with example data":"예시 데이터로 둘러보기","Restore a backup":"백업 복원하기",
