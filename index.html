@@ -463,7 +463,7 @@ td.num,th.num{text-align:right;padding-right:0}
   <div class="lang-h"><strong>Language</strong><button id="lang-close" class="btn small ghost">✕</button></div>
   <input id="lang-q" type="search" placeholder="Search languages" autocomplete="off">
   <div id="lang-list" class="lang-list"></div>
-  <p class="lang-note">Translated automatically by Google. Your workouts stay on this phone.</p>
+  <p class="lang-note">Korean is translated by hand. Other languages use Google automatic translation. Your workouts stay on this phone.</p>
 </div></div>
 
 <main><div class="wrap gut" id="view"></div></main>
@@ -590,6 +590,32 @@ function locApply(d){ if(!LOC.map||!d) return; d.forEach(x=>{ const t=LOC.map[x.
 function locOf(name){ if(!LOC.key||!name) return ''; return LOC.key.get(snj(name))||'' }
 function xn(name){ const t=locOf(name); return t?'<span class="notranslate" translate="no" title="'+esc(name)+'">'+esc(t)+'</span>':esc(name) }
 function xt(name){ return locOf(name)||name }
+/* ---------- hand-written interface text (ko.js); replaces English text on screen ---------- */
+const UI={d:null};
+function trText(s){
+  const U=UI.d; if(!U||!s) return null;
+  if(Object.prototype.hasOwnProperty.call(U.dict,s)) return U.dict[s];
+  const lc=s.toLowerCase(); if(Object.prototype.hasOwnProperty.call(U.ci,lc)) return U.ci[lc];
+  const ex=locOf(s); if(ex) return ex;
+  for(const [re,fn] of U.patterns){ const m=s.match(re); if(m){ try{ return fn(m,x=>trText(x)??x) }catch(e){ return null } } }
+  if(s.includes(' · ')){ const parts=s.split(' · '), out=parts.map(p=>trText(p.trim())); if(out.some(x=>x!=null)) return parts.map((p,i)=>out[i]??p).join(' · ') }
+  if(s.includes(', ')){ const parts=s.split(', '), out=parts.map(p=>trText(p.trim())); if(out.every(x=>x!=null)) return out.join(', ') }
+  return null;
+}
+function trTextNode(n){ const v=n.nodeValue, t=v&&v.trim(); if(!t||!/[A-Za-z]/.test(t)) return; const p=n.parentElement; if(!p||p.closest('script,style,textarea,.notranslate')) return;
+  const r=trText(t); if(r!=null&&r!==t) n.nodeValue=v.replace(t,r) }
+function trAttrs(el){ if(el.closest('.notranslate')) return; ['placeholder','aria-label','title'].forEach(a=>{ const v=el.getAttribute(a); if(!v||!/[A-Za-z]/.test(v)) return; const r=trText(v.trim()); if(r!=null&&r!==v) el.setAttribute(a,r) }) }
+function trTree(root){ if(!UI.d||!root) return;
+  if(root.nodeType===3){ trTextNode(root); return } if(root.nodeType!==1) return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n; const list=[]; while(n=w.nextNode()) list.push(n); list.forEach(trTextNode);
+  if(root.matches('[placeholder],[aria-label],[title]')) trAttrs(root); root.querySelectorAll('[placeholder],[aria-label],[title]').forEach(trAttrs) }
+function uiLoad(){ if(LOC.code!=='ko') return;
+  document.documentElement.lang='ko';
+  const sc=document.createElement('script'); sc.src='ko.js';
+  sc.onload=()=>{ UI.d=window.NS_UI||null; if(!UI.d) return; trTree(document.body);
+    new MutationObserver(ms=>{ ms.forEach(m=>{ if(m.type==='childList') m.addedNodes.forEach(trTree); else if(m.type==='attributes') trAttrs(m.target) }) })
+      .observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['placeholder','aria-label','title']}) };
+  document.head.appendChild(sc) }
 function kindOf(x){ if(x.kd) return x.kd; return x.c==='cardio'?'cardio':x.c==='stretching'?'time':'strength' }
 /* ---------- one exercise, many names ----------
    Every name resolves to a group id: 'L:<library name>' or 'U:<your name>'.
@@ -778,7 +804,7 @@ function typingNow(){ const a=document.activeElement; return a&&a.tagName==='INP
 /* ---------- formatting & maths ---------- */
 function num(n,d){ if(n==null||!isFinite(n)) return '–'; return Number(n).toLocaleString('en-US',{maximumFractionDigits:d==null?1:d}) }
 function fmtT(sec){ if(sec==null||!isFinite(sec)) return '–'; sec=Math.round(sec); const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60; return h?h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'):m+':'+String(s).padStart(2,'0') }
-function fmtDate(ms,o){ return new Date(ms).toLocaleDateString('en-GB',o||{day:'numeric',month:'short'}) }
+function fmtDate(ms,o){ return new Date(ms).toLocaleDateString(LOC.code==='ko'?'ko-KR':'en-GB',o||{day:'numeric',month:'short'}) }
 function parseNum(v){ const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?null:n }
 function parseTime(v,kind){ v=String(v||'').trim(); if(!v) return null;
   if(kind==='sprint'&&!v.includes(':')){ const n=parseFloat(v.replace(',','.')); return isNaN(n)?null:Math.round(n*100)/100 }
@@ -2151,7 +2177,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{ flushAll(); fdFlushAll() });
 
-render(); locLoad();
+render(); locLoad(); uiLoad();
 loadLib();
 if(active()&&!S.demo) wakeOn();
 connectCloud();
@@ -2187,7 +2213,7 @@ fdConnect();
   document.getElementById("lang-close").onclick=function(){ sheet.hidden=true; };
   sheet.addEventListener("click",function(e){ if(e.target===sheet) sheet.hidden=true; });
   q.addEventListener("input",draw);
-  if(code!=="en"){
+  if(code!=="en"&&code!=="ko"){
     window.nsTranslateInit=function(){ try{ new google.translate.TranslateElement({pageLanguage:"en",autoDisplay:false},"google_translate_element"); }catch(e){} };
     var s=document.createElement("script"); s.src="https://translate.google.com/translate_a/element.js?cb=nsTranslateInit"; s.async=true;
     s.onerror=function(){ var t=document.getElementById("toast"); if(t){ t.textContent="Translation needs an internet connection"; t.hidden=false; setTimeout(function(){t.hidden=true},3000);} };
