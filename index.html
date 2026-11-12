@@ -92,6 +92,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 
 .banner{background:var(--accent-soft);border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
 .banner b{font-weight:700}
+.banner .btn{white-space:nowrap;flex:none}
 
 /* session head */
 .sess-head{display:flex;flex-direction:column;gap:6px}
@@ -450,8 +451,8 @@ td.num,th.num{text-align:right;padding-right:0}
 .fd-ai-n{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .fd-ai-n label{display:flex;flex-direction:column;gap:2px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:0}
 .fd-ai-n input{width:100%;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:600 16px var(--f-body);text-align:center;padding:0 2px}
-.tabs .wrap{grid-template-columns:repeat(5,1fr)}
-.tabs button{font-size:10px;letter-spacing:.03em}
+.tabs .wrap{grid-template-columns:repeat(4,1fr)}
+.tabs button{font-size:11px;letter-spacing:.04em}
 </style>
 
 <header class="top"><div class="wrap gut">
@@ -481,7 +482,6 @@ td.num,th.num{text-align:right;padding-right:0}
   <button data-act="tab" data-tab="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>Exercises</button>
   <button data-act="tab" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>History</button>
   <button data-act="tab" data-tab="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M5 15l4-4 4 3 6-7"/></svg>Progress</button>
-  <button data-act="tab" data-tab="food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a2 2 0 0 0 4 0V3M8 10v11M18 21V3c-2.2 1.3-3.5 4-3.5 7.5V14H18"/></svg>Food</button>
 </div></nav>
 
 <div id="sheet" class="sheet" hidden>
